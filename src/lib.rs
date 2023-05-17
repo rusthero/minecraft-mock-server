@@ -25,9 +25,10 @@ pub mod data {
         result
     }
 
-    pub fn read_string(buf: &mut Vec<u8>) -> Result<String, FromUtf8Error> {
+    pub fn read_string(buf: &mut Vec<u8>) -> String {
         let size: usize = read_var_int(buf) as usize;
-        let result = String::from_utf8(buf[..size].to_owned());
+        //let result = String::from_utf8(buf[..size].to_owned());
+        let result = String::from_utf8_lossy(&buf[..size]).into_owned();
 
         buf.drain(..size);
         result

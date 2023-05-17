@@ -26,7 +26,7 @@ async fn handle_client(stream: TcpStream, addr: SocketAddr) -> Result<()> {
         let mut buf = [0; 4096];
         match stream.try_read(&mut buf) {
             Ok(0) => break,
-            Ok(n) => {
+            Ok(n) if n >= 2 => {
                 let mut buf = buf.to_vec();
 
                 let length = read_var_int(&mut buf);
@@ -35,14 +35,21 @@ async fn handle_client(stream: TcpStream, addr: SocketAddr) -> Result<()> {
                 match id {
                     0 => {
                         println!("received handshake packet");
-                        process_handshake(buf).await;
+                        if length == 1 {
+                            println!("it is empty");
+                        } else {
+                            process_handshake(buf).await;
+                        }
                     }
                     _ => {
-                        println!("received {n} size unknown packet");
+                        println!("received {n} bytes of unknown packet");
                     }
                 }
 
                 println!("packet length: {length}, id: {id:x?}")
+            }
+            Ok(_) => {
+                println!("packet too small")
             }
             Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
                 continue;
@@ -58,7 +65,7 @@ async fn handle_client(stream: TcpStream, addr: SocketAddr) -> Result<()> {
 
 async fn process_handshake(mut buf: Vec<u8>) {
     let pro_ver = read_var_int(&mut buf);
-    let srv_addr = read_string(&mut buf).unwrap();
+    let srv_addr = read_string(&mut buf);
     let srv_port = read_u16(&mut buf);
     let next_state = read_var_int(&mut buf);
 
